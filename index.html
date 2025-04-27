@@ -137,17 +137,25 @@
   let currentStream;
 
   async function getCameras() {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-    
-    cameraSelect.innerHTML = '';
+    try {
+      // Request permission first
+      await navigator.mediaDevices.getUserMedia({ video: true });
 
-    videoDevices.forEach((device, index) => {
-      const option = document.createElement('option');
-      option.value = device.deviceId;
-      option.text = device.label || `Camera ${index + 1}`;
-      cameraSelect.appendChild(option);
-    });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+      cameraSelect.innerHTML = '';
+
+      videoDevices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label ? `${device.label} (${index})` : `Camera ${index}`;
+        cameraSelect.appendChild(option);
+      });
+
+    } catch (err) {
+      console.error('Error accessing camera devices:', err);
+    }
   }
 
   function getSelectedResolution() {
@@ -170,8 +178,12 @@
       }
     };
 
-    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-    videoElement.srcObject = currentStream;
+    try {
+      currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+      videoElement.srcObject = currentStream;
+    } catch (err) {
+      console.error('Error starting video stream:', err);
+    }
   }
 
   cameraSelect.addEventListener('change', () => {
