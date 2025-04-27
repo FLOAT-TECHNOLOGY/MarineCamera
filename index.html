@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ocean Themed Camera Viewer</title>
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      font-family: 'Poppins', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      color: #00d2ff;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      margin-top: 30px;
+      font-size: 2.5rem;
+      background: linear-gradient(to right, #00d2ff, #3a7bd5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-8px);
+      }
+    }
+
+    /* Controls Styling */
+    .controls-container {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    select, button {
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 150, 255, 0.3);
+    }
+
+    select:hover, button:hover {
+      background: linear-gradient(135deg, #0072ff, #00c6ff);
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(0, 150, 255, 0.5);
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-position: right 10px center;
+      background-repeat: no-repeat;
+      padding-right: 40px;
+    }
+
+    /* Video Styling */
+    video {
+      margin-top: 40px;
+      width: 85%;
+      max-width: 800px;
+      border-radius: 20px;
+      border: 3px solid #00d2ff;
+      box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+      transition: transform 0.3s ease;
+    }
+
+    video:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 30px rgba(0, 210, 255, 0.8);
+    }
+
+    /* Screenshot Button Special Animation */
+    #screenshotBtn {
+      background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+    }
+
+    #screenshotBtn:hover {
+      background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+      select, button {
+        width: 90%;
+      }
+      video {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🌊 Ocean Camera Viewer 🌊</h1>
+
+<div class="controls-container">
+  <select id="cameraSelect"></select>
+  <select id="resolutionSelect">
+    <option value="640x480">640x480 (VGA)</option>
+    <option value="1280x720">1280x720 (HD)</option>
+    <option value="1920x1080">1920x1080 (Full HD)</option>
+  </select>
+  <button id="screenshotBtn">📷 Take Screenshot</button>
+</div>
+
+<video id="video" autoplay playsinline></video>
+
+<script>
+  const cameraSelect = document.getElementById('cameraSelect');
+  const resolutionSelect = document.getElementById('resolutionSelect');
+  const screenshotBtn = document.getElementById('screenshotBtn');
+  const videoElement = document.getElementById('video');
+
+  let currentStream;
+
+  async function getCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+    cameraSelect.innerHTML = '';
+
+    videoDevices.forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.text = device.label || `Camera ${index + 1}`;
+      cameraSelect.appendChild(option);
+    });
+  }
+
+  function getSelectedResolution() {
+    const [width, height] = resolutionSelect.value.split('x').map(Number);
+    return { width, height };
+  }
+
+  async function startStream(deviceId) {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+
+    const { width, height } = getSelectedResolution();
+
+    const constraints = {
+      video: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        width: { ideal: width },
+        height: { ideal: height }
+      }
+    };
+
+    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+    videoElement.srcObject = currentStream;
+  }
+
+  cameraSelect.addEventListener('change', () => {
+    startStream(cameraSelect.value);
+  });
+
+  resolutionSelect.addEventListener('change', () => {
+    startStream(cameraSelect.value);
+  });
+
+  screenshotBtn.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = videoElement.videoWidth;
+    canvas.height = videoElement.videoHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'screenshot.png';
+    link.click();
+  });
+
+  async function init() {
+    await getCameras();
+    if (cameraSelect.options.length > 0) {
+      startStream(cameraSelect.value);
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>
